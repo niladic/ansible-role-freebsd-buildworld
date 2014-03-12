@@ -1,0 +1,21 @@
+# Activates the buildworld role
+buildworld_activated: false
+
+# Will copy a local src.txz file onto the server and extract it
+buildworld_use_local_src_tarball: true
+buildworld_src_local_file: src.txz
+buildworld_src_remote_file: /root/src.txz
+
+# Forces deletion of /usr/src
+buildworld_src_force_delete: false
+
+# Ensures that the lines specified by buildworld_src_readme_grep_line is in /usr/src/README
+buildworld_src_version_insurance: true
+buildworld_src_readme_grep_line: release/9.0.0
+
+buildworld_force_make: false
+buildworld_use_state_file: true
+buildworld_state_file: /root/ansible.state.src.makebuildworld
+
+# Redirects make buildworld stdout and stderr to a file
+buildworld_stdouterr_file: /root/buildworld.stdouterr

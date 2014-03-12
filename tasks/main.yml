@@ -1,0 +1,57 @@
+---
+- name: copy src.txz on the server
+  copy: src={{ buildworld_src_local_file }} dest={{ buildworld_src_remote_file }}
+  when: buildworld_activated and buildworld_use_local_src_tarball
+  tags: buildworld
+
+- name: /usr/src directory exists
+  file: path=/usr/src state=absent recurse=yes
+  when: buildworld_activated and buildworld_src_force_delete
+  tags: buildworld
+
+- name: /usr/src directory exists
+  file: path=/usr/src
+        owner=root group=wheel mode=750
+        state=directory
+  when: buildworld_activated
+  tags: buildworld
+
+- name: src.txz is extracted
+  shell: test -e /usr/src/README && echo 'README exists' || tar -C / -xzf {{ buildworld_src_remote_file }}
+  register: result_buildworld_src_extract
+  changed_when: "'README exists' not in result_buildworld_src_extract.stdout"
+  when: buildworld_activated and buildworld_use_local_src_tarball
+  tags: buildworld
+
+# This task ensures that the extracted src is from the correct FreeBSD branch
+# It will simply fail if there is no line buildworld_src_readme_grep_line in /usr/src/README
+# buildworld_src_readme_grep_line can be set to release/9.0.0 for 9.0-RELEASE
+- name: correct src version insurance
+  shell: grep '{{ buildworld_src_readme_grep_line }}' /usr/src/README
+  when: buildworld_activated and buildworld_src_version_insurance
+  changed_when: false
+  tags: buildworld
+
+# Strategy to use a state file that indicates if buildworld has already been done
+# The file is created only after make buildworld has been successful
+# It is better to use a state file since buildworld can fail during the make
+# (for example when ssh disconnects) and so /usr/obj cannot be trusted
+# Ansible stdout will have "buildworld complete" if the buildworld was successful
+- name: make buildworld when state file does not exists
+  shell: test -e {{ buildworld_state_file }} ||
+         (echo "beginning buildworld" &&
+          make -C /usr/src buildworld > {{ buildworld_stdouterr_file }} 2>&1 &&
+          echo "buildworld complete" && touch {{ buildworld_state_file }})
+  register: result_buildworld_make
+  changed_when: "result_buildworld_make.stdout != ''"
+  when: buildworld_activated and buildworld_use_state_file and not buildworld_force_make
+  tags: buildworld
+
+- name: force make buildworld
+  shell: (echo "beginning buildworld" &&
+          make -C /usr/src buildworld > {{ buildworld_stdouterr_file }} 2>&1 &&
+          echo "buildworld complete")
+  register: result_buildworld_make
+  changed_when: "result_buildworld_make.stdout != ''"
+  when: buildworld_activated and buildworld_force_make
+  tags: buildworld

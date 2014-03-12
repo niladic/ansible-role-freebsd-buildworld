@@ -4,7 +4,7 @@
   when: buildworld_activated and buildworld_use_local_src_tarball
   tags: buildworld
 
-- name: /usr/src directory exists
+- name: delete /usr/src directory when forced
   file: path=/usr/src state=absent recurse=yes
   when: buildworld_activated and buildworld_src_force_delete
   tags: buildworld
